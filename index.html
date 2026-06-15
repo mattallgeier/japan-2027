@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Japan 2027 — Activity Planner</title>
+  <style>
+    :root {
+      --navy: #1a2744;
+      --red: #BC002D;
+      --gold: #e8a020;
+      --green: #2e7d32;
+      --bg: #f2f2ef;
+      --white: #ffffff;
+      --text: #1a1a1a;
+      --muted: #666;
+      --border: #e8e8e8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 20px 32px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+    }
+
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.3px; }
+    header .subtitle { font-size: 0.8rem; opacity: 0.65; margin-top: 2px; }
+
+    .legend {
+      display: flex;
+      gap: 24px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .pill-tauck {
+      background: #388e3c; color: white;
+      font-size: 0.68rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px; letter-spacing: 0.3px;
+    }
+
+    .pill-add {
+      background: #546e7a; color: white;
+      font-size: 0.68rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px; letter-spacing: 0.3px;
+    }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      background: #0f1a33; color: white;
+      padding: 12px 32px;
+      display: flex; gap: 48px; font-size: 0.78rem;
+    }
+    .summary-stat strong { display: block; font-size: 1.2rem; font-weight: 700; color: var(--gold); }
+
+    /* ── Main ── */
+    main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Location section ── */
+    .location-section {
+      margin-bottom: 28px;
+      background: var(--white);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.09);
+    }
+
+    .location-header {
+      padding: 14px 24px; color: white;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .location-header h2 { font-size: 1rem; font-weight: 700; letter-spacing: 0.3px; flex: 1; }
+    .location-meta { font-size: 0.75rem; opacity: 0.8; }
+
+    .tokyo    .location-header { background: #1565C0; }
+    .hakone   .location-header { background: #2E7D32; }
+    .hiroshima .location-header { background: #B71C1C; }
+    .kyoto    .location-header { background: #6A1B9A; }
+    .nara     .location-header { background: #E65100; }
+    .osaka    .location-header { background: #00695C; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      background: #f7f7f7;
+      padding: 9px 14px;
+      text-align: left;
+      font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.9px;
+      color: #888; border-bottom: 2px solid var(--border);
+    }
+    thead th.center { text-align: center; }
+
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+    tbody tr.on-tauck { background: #f5fbf5; }
+    tbody tr.on-tauck:hover { background: #ecf7ec; }
+
+    td { padding: 10px 14px; vertical-align: middle; }
+
+    td.photo-col { width: 130px; min-width: 110px; padding: 8px 10px 8px 14px; }
+
+    td.activity-name {
+      font-weight: 600; color: #111;
+      width: 175px; min-width: 140px;
+      vertical-align: middle;
+    }
+
+    td.description { color: #555; font-size: 0.82rem; line-height: 1.45; vertical-align: middle; }
+
+    td.tauck-col { text-align: center; width: 90px; min-width: 80px; vertical-align: middle; }
+    td.star-col  { text-align: center; width: 68px; min-width: 56px; white-space: nowrap; vertical-align: middle; }
+
+    /* ── Photo cell ── */
+    .activity-img {
+      width: 116px;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 7px;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      background: #eee;
+    }
+
+    .activity-img.loaded { opacity: 1; }
+
+    .img-placeholder {
+      width: 116px;
+      height: 76px;
+      border-radius: 7px;
+      background: linear-gradient(90deg, #ececec 25%, #f5f5f5 50%, #ececec 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    .img-missing {
+      width: 116px; height: 76px;
+      border-radius: 7px;
+      background: #f5f5f5;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: #ccc;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Badges ── */
+    .badge-tauck {
+      display: inline-block;
+      background: #e8f5e9; color: #2e7d32;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px;
+      border: 1px solid #c8e6c9; letter-spacing: 0.2px;
+    }
+
+    .badge-add {
+      display: inline-block;
+      background: #f5f5f5; color: #90a4ae;
+      font-size: 0.7rem; font-weight: 600;
+      padding: 3px 9px; border-radius: 20px;
+      border: 1px solid #e0e0e0;
+    }
+
+    /* ── Stars ── */
+    .star-filled { color: #e8a020; }
+    .star-empty  { color: #ddd; }
+    .stars { font-size: 1rem; letter-spacing: 1px; }
+
+    /* ── Notes ── */
+    .notes {
+      background: white; border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.09);
+      margin-bottom: 28px;
+    }
+    .notes h3 {
+      font-size: 0.85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: #888; margin-bottom: 10px;
+    }
+    .notes ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 6px 24px; }
+    .notes li { font-size: 0.8rem; color: #555; padding: 3px 0; border-bottom: 1px solid #f5f5f5; }
+    .notes li strong { color: #333; }
+
+    footer { text-align: center; padding: 20px; font-size: 0.75rem; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🇯🇵 Japan 2027 — Activity Planner</h1>
+  <p class="subtitle">6 adults (incl. 2 seniors) + 3 kids (12F · 9M · 5F) &nbsp;|&nbsp; June 2027 &nbsp;|&nbsp; ~12 days &nbsp;|&nbsp; Tokyo → Osaka</p>
+  <div class="legend">
+    <div class="legend-item"><span class="pill-tauck">✓ TAUCK</span> Included in Tauck Bridges itinerary</div>
+    <div class="legend-item"><span class="pill-add">+ ADD</span> Supplement / independent activity</div>
+    <div class="legend-item"><span style="color:#e8a020; font-size:0.9rem;">★★★</span> Kid ratings &nbsp;3 = must-do &nbsp;·&nbsp; 2 = good &nbsp;·&nbsp; 1 = marginal</div>
+  </div>
+</header>
+
+<div class="summary-bar">
+  <div class="summary-stat"><strong>32</strong> Total activities</div>
+  <div class="summary-stat"><strong>17</strong> On Tauck itinerary</div>
+  <div class="summary-stat"><strong>15</strong> Independent additions</div>
+  <div class="summary-stat"><strong>6</strong> Destinations</div>
+</div>
+
+<main>
+
+  <!-- ═══════════════ TOKYO ═══════════════ -->
+  <div class="location-section tokyo">
+    <div class="location-header">
+      <span>🏙️</span>
+      <h2>Tokyo</h2>
+      <span class="location-meta">3 nights &nbsp;·&nbsp; Conrad Tokyo &nbsp;·&nbsp; Days 1–3 on Tauck</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Photo</th>
+          <th style="width:175px">Activity</th>
+          <th>Description</th>
+          <th class="center">Tauck?</th>
+          <th class="center">12F</th>
+          <th class="center">9M</th>
+          <th class="center">5F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Asakusa" alt="Rickshaw ride"></td>
+          <td class="activity-name">Rickshaw ride (Asakusa)</td>
+          <td class="description">Traditional pulled rickshaw tour through the historic Asakusa shitamachi district — one of Tokyo's oldest neighborhoods with temples and lantern-lit streets.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Sushi" alt="Sushi making"></td>
+          <td class="activity-name">Sushi making class</td>
+          <td class="description">Hands-on lesson rolling and assembling traditional nigiri and maki sushi with a local chef — learning the rice technique, knife skills, and Japanese food culture.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Taiko" alt="Taiko drumming"></td>
+          <td class="activity-name">Taiko drumming lesson</td>
+          <td class="description">Learn to beat traditional Japanese taiko drums in a guided lesson — loud, physical, and exhilarating. One of the most crowd-pleasing experiences for all ages.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Sumo" alt="Sumo wrestling"></td>
+          <td class="activity-name">Sumo show / exhibition</td>
+          <td class="description">Watch Japan's ancient national sport live — enormous wrestlers in ceremonial ritual, thunderous bouts, and a window into one of Japan's most traditional institutions.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="teamLab" alt="teamLab digital art"></td>
+          <td class="activity-name">teamLab Planets (digital art)</td>
+          <td class="description">Immersive walk-through rooms of flowing light and projections that react to movement — walk through water with koi fish, become surrounded by flowers, dive into living artwork.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Harajuku" alt="Harajuku"></td>
+          <td class="activity-name">Harajuku &amp; Omotesando</td>
+          <td class="description">Tokyo's youth fashion and street culture hub — Takeshita Street is packed with trends, quirky boutiques, and crepe stands. Omotesando is the upscale counterpart.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Ghibli Museum" alt="Ghibli Museum"></td>
+          <td class="activity-name">Ghibli Museum</td>
+          <td class="description">Intimate, magical museum celebrating Studio Ghibli animation (Totoro, Spirited Away, Kiki's Delivery Service). Requires advance lottery tickets — book 4 months out.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Akihabara" alt="Akihabara arcades"></td>
+          <td class="activity-name">Akihabara arcades</td>
+          <td class="description">Multi-floor game centers unlike anything in the US — crane games, rhythm games, retro floors, anime merchandise, and electronics. A sensory overload in the best way.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Nippon Professional Baseball" alt="Japanese baseball"></td>
+          <td class="activity-name">Japanese baseball game</td>
+          <td class="description">Live pro baseball at Tokyo Dome or Meiji Jingu Stadium — wildly enthusiastic organized cheering sections with trumpets and drums, unique stadium food, and electric atmosphere.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ HAKONE ═══════════════ -->
+  <div class="location-section hakone">
+    <div class="location-header">
+      <span>🏔️</span>
+      <h2>Hakone</h2>
+      <span class="location-meta">1 night &nbsp;·&nbsp; Hotel Indigo Hakone Gora &nbsp;·&nbsp; Day 4 on Tauck</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Photo</th>
+          <th style="width:175px">Activity</th>
+          <th>Description</th>
+          <th class="center">Tauck?</th>
+          <th class="center">12F</th>
+          <th class="center">9M</th>
+          <th class="center">5F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Shinkansen" alt="Bullet train"></td>
+          <td class="activity-name">Bullet train (Shinkansen)</td>
+          <td class="description">Japan's iconic high-speed train reaching up to 200mph — the ride itself is an experience, with possible Mt. Fuji views from the window on the Tokyo–Hakone/Hiroshima segments.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Lake Ashi" alt="Lake Ashi pirate boat"></td>
+          <td class="activity-name">Lake Ashi pirate boat cruise</td>
+          <td class="description">Sightseeing cruise on Lake Ashi aboard a pirate-ship-themed galleon, with Mt. Fuji views weather permitting. The pirate theme makes it extra fun for younger kids.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Hakone Ropeway" alt="Hakone ropeway"></td>
+          <td class="activity-name">Hakone ropeway (gondola)</td>
+          <td class="description">Aerial gondola ride over volcanic Owakudani — steaming sulfur vents below, sweeping mountain views above, and famous black eggs cooked in the hot springs at the top.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Ryokan" alt="Ryokan onsen"></td>
+          <td class="activity-name">Ryokan + onsen experience</td>
+          <td class="description">Traditional inn with tatami rooms, yukata robes, kaiseki multi-course dinner, and outdoor hot spring (onsen) baths. The quintessential Japan overnight experience.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ HIROSHIMA / MIYAJIMA ═══════════════ -->
+  <div class="location-section hiroshima">
+    <div class="location-header">
+      <span>⛩️</span>
+      <h2>Hiroshima &amp; Miyajima</h2>
+      <span class="location-meta">2 nights &nbsp;·&nbsp; Hilton Hiroshima &nbsp;·&nbsp; Days 5–6 on Tauck</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Photo</th>
+          <th style="width:175px">Activity</th>
+          <th>Description</th>
+          <th class="center">Tauck?</th>
+          <th class="center">12F</th>
+          <th class="center">9M</th>
+          <th class="center">5F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Hiroshima Peace Memorial Park" alt="Peace Memorial Park"></td>
+          <td class="activity-name">Peace Memorial Park &amp; A-Bomb Dome</td>
+          <td class="description">UNESCO-listed ruins and peaceful park at the 1945 bombing hypocenter. The A-Bomb Dome is haunting and preserved exactly as it stood. The museum is powerful for older kids; the park is accessible for all ages.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Okonomiyaki" alt="Okonomiyaki"></td>
+          <td class="activity-name">Okonomiyaki cooking class</td>
+          <td class="description">Make Hiroshima's signature savory layered pancake from scratch — noodles, cabbage, egg, and pork on a hot griddle. Hiroshima-style is different from Osaka's and locals are passionate about it.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Itsukushima" alt="Miyajima floating torii"></td>
+          <td class="activity-name">Miyajima Island (floating torii + deer)</td>
+          <td class="description">Scenic island reached by ferry: iconic floating torii gate of Itsukushima Shrine, free-roaming deer, Daisho-in temple with spinning prayer wheels, and street food (oysters, maple-leaf cakes).</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ KYOTO ═══════════════ -->
+  <div class="location-section kyoto">
+    <div class="location-header">
+      <span>🏯</span>
+      <h2>Kyoto</h2>
+      <span class="location-meta">3–4 nights &nbsp;·&nbsp; Hotel The Mitsui Kyoto (Condé Nast Gold List) &nbsp;·&nbsp; Days 7–9 on Tauck</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Photo</th>
+          <th style="width:175px">Activity</th>
+          <th>Description</th>
+          <th class="center">Tauck?</th>
+          <th class="center">12F</th>
+          <th class="center">9M</th>
+          <th class="center">5F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Nijo Castle" alt="Nijo Castle"></td>
+          <td class="activity-name">Nijo Castle (Nightingale floor)</td>
+          <td class="description">17th-century shogun castle famous for its "nightingale floor" — boards deliberately built to squeak like birds when walked on, alerting guards to intruders. Kids love testing it.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Kinkaku-ji" alt="Golden Pavilion"></td>
+          <td class="activity-name">Kinkaku-ji (Golden Pavilion)</td>
+          <td class="description">Gold-leaf-covered Zen temple reflected perfectly in its mirror pond — one of Japan's most iconic and photographed images. Crowds are heavy; go early for the best experience.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Kiyomizudera" alt="Kiyomizudera temple"></td>
+          <td class="activity-name">Kiyomizudera (Pure Water Temple)</td>
+          <td class="description">Dramatic hillside temple built without a single nail, with a sweeping wooden stage jutting over the forest canopy and stunning views of Kyoto below. A sacred spring grants wishes.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Japanese tea ceremony" alt="Tea ceremony"></td>
+          <td class="activity-name">Tea ceremony</td>
+          <td class="description">Hands-on traditional matcha tea-making with a tea master in a historic setting — learn the precise movements, the meaning behind each gesture, and taste freshly whisked tea.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Japanese calligraphy" alt="Calligraphy"></td>
+          <td class="activity-name">Calligraphy lesson</td>
+          <td class="description">Learn to write Japanese kanji characters with ink and a traditional brush — a meditative, creative activity with beautiful results to take home as souvenirs.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr class="on-tauck">
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Geisha" alt="Geisha performance"></td>
+          <td class="activity-name">Geisha performance</td>
+          <td class="description">Watch a trained geisha or maiko (apprentice) perform traditional dance, music, and parlor games in an intimate setting — one of the most refined cultural experiences Japan offers.</td>
+          <td class="tauck-col"><span class="badge-tauck">✓ TAUCK</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Iwatayama Monkey Park" alt="Arashiyama Monkey Park"></td>
+          <td class="activity-name">Arashiyama Monkey Park</td>
+          <td class="description">Short hillside hike to a viewpoint where 120+ wild Japanese macaques roam freely. Visitors can feed them through a fence at the top. Stunning views over Kyoto and the Oi River.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Kimono" alt="Kimono rental"></td>
+          <td class="activity-name">Kimono rental</td>
+          <td class="description">Full-service kimono dressing for a walk through Kyoto's historic Gion and Higashiyama districts. Shops handle the entire styling process. A memorable photo experience for all ages.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Firefly" alt="June fireflies"></td>
+          <td class="activity-name">June fireflies (Kibune)</td>
+          <td class="description">Watch wild fireflies drift along the forested Kibune river valley north of Kyoto at dusk — a uniquely magical, June-only experience. Best after dinner along the riverbanks.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ NARA ═══════════════ -->
+  <div class="location-section nara">
+    <div class="location-header">
+      <span>🦌</span>
+      <h2>Nara</h2>
+      <span class="location-meta">Day trip from Kyoto &nbsp;·&nbsp; ~45 min by train &nbsp;·&nbsp; Not on Tauck</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Photo</th>
+          <th style="width:175px">Activity</th>
+          <th>Description</th>
+          <th class="center">Tauck?</th>
+          <th class="center">12F</th>
+          <th class="center">9M</th>
+          <th class="center">5F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Nara Park" alt="Nara deer park"></td>
+          <td class="activity-name">Nara deer park + Todai-ji</td>
+          <td class="description">Hundreds of freely roaming deer who bow on command for crackers sold throughout the park, plus Todai-ji — the world's largest wooden building housing Japan's biggest bronze Buddha statue.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ OSAKA ═══════════════ -->
+  <div class="location-section osaka">
+    <div class="location-header">
+      <span>🐙</span>
+      <h2>Osaka</h2>
+      <span class="location-meta">1–2 nights &nbsp;·&nbsp; Fly-out city (KIX) &nbsp;·&nbsp; Not on Tauck (Tauck ends in Kyoto)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Photo</th>
+          <th style="width:175px">Activity</th>
+          <th>Description</th>
+          <th class="center">Tauck?</th>
+          <th class="center">12F</th>
+          <th class="center">9M</th>
+          <th class="center">5F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Kaiyukan" alt="Osaka Aquarium"></td>
+          <td class="activity-name">Osaka Aquarium Kaiyukan</td>
+          <td class="description">One of the world's finest aquariums — the central tank is 8 stories tall and houses whale sharks and manta rays. Plan 2–3 hours. Strong recommendation for all three kids.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Takarazuka Revue" alt="Takarazuka Revue"></td>
+          <td class="activity-name">Takarazuka Revue</td>
+          <td class="description">World-famous all-female theater company near Osaka performing dazzling, elaborately costumed musical productions. A Japanese cultural institution — especially for the 12-year-old with a theater interest.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★</span><span class="star-empty">☆☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+        <tr>
+          <td class="photo-col"><div class="img-placeholder"></div><img class="activity-img" data-wiki="Dotonbori" alt="Dotonbori neon district"></td>
+          <td class="activity-name">Dotonbori street food &amp; neon</td>
+          <td class="description">Osaka's iconic neon-lit canal district at night — the glowing Glico sign, giant mechanical crabs, and wall-to-wall street food: takoyaki, kushikatsu, ramen, and more. Best experienced after dark.</td>
+          <td class="tauck-col"><span class="badge-add">+ ADD</span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★★</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+          <td class="star-col"><span class="stars"><span class="star-filled">★★</span><span class="star-empty">☆</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ NOTES ═══════════════ -->
+  <div class="notes">
+    <h3>⚠️ Planning Notes</h3>
+    <ul>
+      <li><strong>Ghibli Museum:</strong> Tickets sold by monthly lottery opening ~4 months before visit. Highest priority advance booking.</li>
+      <li><strong>teamLab Planets:</strong> Book weeks ahead — popular, timed entry. Tauck likely handles this, confirm if independent.</li>
+      <li><strong>Takarazuka Revue:</strong> Performance schedules released a few months out. A tour operator can help secure tickets.</li>
+      <li><strong>Nara:</strong> Not on Tauck's itinerary — add as an independent half-day from Kyoto. Easily done by train.</li>
+      <li><strong>Osaka:</strong> Tauck ends in Kyoto (Day 10 depart). Osaka and the aquarium require extending your trip by 1–2 days.</li>
+      <li><strong>Miyajima deer:</strong> Free-roaming deer on the island — the kids will be delighted to encounter deer a second time after Nara.</li>
+      <li><strong>June fireflies:</strong> A unique June-only experience at Kibune (north of Kyoto). Best 7–9pm. Combine with dinner at a riverside restaurant.</li>
+      <li><strong>Sumo:</strong> June has no official tournament in Tokyo. Tauck likely arranges a private exhibition or stable morning visit instead.</li>
+      <li><strong>Nijo Castle nightingale floor:</strong> The 9-year-old will especially enjoy this — the "squeaky floor" story is a great hook for kids.</li>
+      <li><strong>Group split-up tip:</strong> Sumo / calligraphy / tea ceremony work well as adult-led while kids do a parallel activity.</li>
+    </ul>
+  </div>
+
+</main>
+
+<footer>
+  Japan 2027 Family Trip Planning &nbsp;·&nbsp; Generated June 2026 &nbsp;·&nbsp; Tauck Bridges "Journey Through Japan" (10 days, $10,190/person) vs. extended independent itinerary (~12–14 days) &nbsp;·&nbsp; Photos via Wikipedia
+</footer>
+
+<script>
+  // Load Wikipedia thumbnail images for each activity
+  // Each img has data-wiki="Article Name" — we fetch the page summary and pull the thumbnail
+  const imgs = document.querySelectorAll('.activity-img[data-wiki]');
+
+  // Stagger requests slightly to be polite to the API
+  imgs.forEach((img, i) => {
+    setTimeout(() => {
+      const article = img.getAttribute('data-wiki');
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(article)}`;
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error('Not found');
+          return res.json();
+        })
+        .then(data => {
+          const placeholder = img.previousElementSibling; // the shimmer div
+          if (data.thumbnail && data.thumbnail.source) {
+            img.src = data.thumbnail.source;
+            img.onload = () => {
+              img.classList.add('loaded');
+              if (placeholder) placeholder.style.display = 'none';
+            };
+            img.onerror = () => showMissing(img, placeholder);
+          } else {
+            showMissing(img, placeholder);
+          }
+        })
+        .catch(() => {
+          const placeholder = img.previousElementSibling;
+          showMissing(img, placeholder);
+        });
+    }, i * 80); // 80ms stagger between requests
+  });
+
+  function showMissing(img, placeholder) {
+    if (placeholder) placeholder.style.display = 'none';
+    const div = document.createElement('div');
+    div.className = 'img-missing';
+    div.textContent = '📷';
+    img.parentNode.insertBefore(div, img);
+    img.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
